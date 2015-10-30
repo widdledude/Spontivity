@@ -40,7 +40,9 @@ public class MainActivity extends AppCompatActivity {
     private AccessTokenTracker tracker;
     private ProfileTracker profTracker;
     private Profile profile;
+
     private FacebookCallback<LoginResult> facecall = new FacebookCallback<LoginResult>() {
+        //called when user successfully logs in
         @Override
         public void onSuccess(LoginResult loginResult) {
             AccessToken accessToken = loginResult.getAccessToken();
@@ -48,9 +50,10 @@ public class MainActivity extends AppCompatActivity {
             display(profile);
         }
 
+        //called when user cancels login request(closes the popup login page)
         @Override
         public void onCancel() {
-
+            details.setText("Canceled");
         }
 
         @Override
@@ -65,21 +68,36 @@ public class MainActivity extends AppCompatActivity {
         FacebookSdk.sdkInitialize(getApplicationContext());
         setContentView(R.layout.activity_main);
 
+        //initializes label text
         details = (TextView) findViewById(R.id.textField);
         details.setText("Hello");
+        
+        //sets image in imageview
         ImageView image1 = (ImageView) findViewById(R.id.image);
         image1.setImageResource(R.drawable.something);
+        
+        //makes ProfilePictureView invisible (not sure if used on button, then you can click it, then just button.setEnabled(false))
+        ProfilePictureView pic = (ProfilePictureView) findViewById(R.id.picture);
+        pic.setVisibility(View.GONE);
 
         LoginButton loginButton = (LoginButton) findViewById(R.id.login_button);
+        
+        //sets access restrictions
         loginButton.setReadPermissions("public_profile");
+        
+        //initializes and registers the callback managers
         callback = CallbackManager.Factory.create();
         loginButton.registerCallback(callback, facecall);
+        
+        //keeps information updated if user disconnects from internet
         tracker = new AccessTokenTracker() {
             @Override
             protected void onCurrentAccessTokenChanged(AccessToken oldToken, AccessToken newToken) {
 
             }
         };
+        
+        //keeps information updated if user changes facebook info
         profTracker = new ProfileTracker() {
             @Override
             protected void onCurrentProfileChanged(Profile oldProf, Profile newProf) {
@@ -89,6 +107,8 @@ public class MainActivity extends AppCompatActivity {
                //     details.setText("Logged off.");
             }
         };
+        
+        //start tracking each
         tracker.startTracking();;
         profTracker.startTracking();
     }
@@ -118,33 +138,28 @@ public class MainActivity extends AppCompatActivity {
     public void display(Profile prof)  {
         if (prof != null) {
             details.setText("Hello, " + prof.getName());
-//            Uri pic = prof.getProfilePictureUri(100, 100);
-            ImageView imageView = (ImageView) findViewById(R.id.image);
-//            imageView.setImageURI(Uri.parse(pic.toString()));
-            Bitmap bitmap = getFacebookProfilePicture(prof.getId());
-            imageView.setImageBitmap(bitmap);
+            ProfilePictureView pic = (ProfilePictureView) findViewById(R.id.picture);
+            
+            //makes the picture view visible
+            pic.setVisibility(View.VISIBLE);
+            
+            //adds profile picture to ProfilePictureView by linking profile to the picture view
+            pic.setProfileId(prof.getId());
         }
         else
             details.setText("Profile is null");
-    }
-    public Bitmap getFacebookProfilePicture(String userID){
-        Bitmap bitmap = null;
-        try {
-        URL imageURL = new URL("https://graph.facebook.com/" + userID + "/picture?type=large");
-        bitmap = BitmapFactory.decodeStream(imageURL.openConnection().getInputStream());
-        } catch (Exception e){};
-        return bitmap;
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         profile = Profile.getCurrentProfile();
-        details.setText("Resumed");
+        //details.setText("Resumed");
         if (profile != null)
             display(profile);
     }
 
+    //called when app is removed from ram and stops tracking info
     @Override
     protected void onStop() {
         super.onStop();
